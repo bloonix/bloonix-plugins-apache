@@ -1,0 +1,13 @@
+Source: bloonix-plugins-apache
+Section: net
+Priority: extra
+Maintainer: Jonny Schulz <js@bloonix.de>
+Build-Depends: debhelper (>= 7)
+Standards-Version: 3.7.3
+Homepage: http://www.bloonix.de/
+
+Package: bloonix-plugins-apache
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}, bloonix-core, curl
+Description: Bloonix Plugins Apache
+ bloonix-plugins-apache provides plugins to monitor apache.

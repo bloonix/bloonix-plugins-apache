@@ -1,0 +1,44 @@
+bloonix-plugins-apache (0.10) released at 2014-11-03
+
+    * Updated the license information.
+
+bloonix-plugins-apache (0.9) released at 2014-08-25
+
+    * Licence added and old releases deleted.
+
+bloonix-plugins-apache (0.8) released at 2014-03-23
+
+    * Complete rewrite of all plugins.
+
+bloonix-plugins-apache (0.7) released at 2012-03-14
+
+    * Improved the yaml file handling in check-apache2.
+
+bloonix-plugins-apache (0.6) released at 2011-11-29
+
+    * Updated the plugin-* files.
+
+bloonix-plugins-apache (0.5) released at 2011-06-25
+
+    * Renamed environment variable YAML_FILE_BASEDIR to
+      PLUGIN_LIBDIR.
+    * Changed the default error status from WARNING to
+      CRITICAL.
+    * Kicked unused option o_stat.
+
+bloonix-plugins-apache (0.4) released at 2011-05-05
+
+    * Changed the output string from "HTTP" to "APACHE".
+
+bloonix-plugins-apache (0.3) released at 2010-12-27
+
+    * Renamed all plugin files from *.plugin to plugin-*.
+
+bloonix-plugins-apache (0.2) released at 2010-11-17
+
+    * Kicked option --stat from all plugins, because
+      statistics will be printed by default on stdout.
+
+bloonix-plugins-apache (0.1) released at 2010-08-02
+
+    * Initial release.

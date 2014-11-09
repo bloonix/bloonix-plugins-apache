@@ -1,0 +1,238 @@
+plugin {
+    id 1
+    plugin Apache2.Statistics
+    command check-apache2
+    datatype statistic
+    category System,Webserver,Apache2
+    netaccess yes
+    prefer localhost
+    abstract Apache2 process status
+    description Apache2 webserver statistics and process status.
+}
+
+statistic {
+    statkey sendrep
+    alias Sending reply
+    datatype bigint
+    description Sending Reply.
+}
+
+statistic {
+    statkey readreq
+    alias Reading request
+    datatype bigint
+    description Reading Request.
+}
+
+statistic {
+    statkey bytperreq
+    alias Bytes/request
+    datatype float
+    units bytes
+    description Bytes per request.
+}
+
+statistic {
+    statkey keepalive
+    alias Keepalive read
+    datatype bigint
+    description Keepalive read.
+}
+
+statistic {
+    statkey dnslookup
+    alias DNS lookup
+    datatype bigint
+    description DNS Lookup.
+}
+
+statistic {
+    statkey idleworker
+    alias Idle workers
+    datatype bigint
+    description Idle workers.
+}
+
+statistic {
+    statkey waitproc
+    alias Waiting for connection
+    datatype bigint
+    description Waiting for Connection.
+}
+
+statistic {
+    statkey reqpersec
+    alias Requests/second
+    datatype float
+    description Requests per second.
+}
+
+statistic {
+    statkey startup
+    alias Starting up
+    datatype bigint
+    description Starting up.
+}
+
+statistic {
+    statkey bytpersec
+    alias Bytes/second
+    datatype float
+    units bytes
+    description Bytes per second.
+}
+
+statistic {
+    statkey gracefin
+    alias Gracefully finishing
+    datatype bigint
+    description Gracefully finishing.
+}
+
+statistic {
+    statkey idleclw
+    alias Idle cleanup
+    datatype bigint
+    description Idle cleanup of worker.
+}
+
+statistic {
+    statkey logging
+    alias Logging
+    datatype bigint
+    description Logging.
+}
+
+statistic {
+    statkey busyworkers
+    alias Busy workers
+    datatype bigint
+    description Workers currently busy.
+}
+
+statistic {
+    statkey closeconn
+    alias Closing connection
+    datatype bigint
+    description Closing connection.
+}
+
+statistic {
+    statkey openslot
+    alias Open slots
+    datatype bigint
+    description Open slot with no current process.
+}
+
+statistic {
+    statkey ttlacc
+    alias Total accesses
+    datatype bigint
+    description Total accesses processed.
+}
+
+statistic {
+    statkey ttlbyt
+    alias Total bytes
+    datatype bigint
+    units bytes
+    description Total bytes processed.
+}
+
+chart {
+    id 1
+    title Apache - process status
+    options {
+        ylabel count
+        chart-type area
+        series {
+            name waitproc
+            color \#66c066
+        }
+        series {
+            name startup
+            color \#0000ff
+        }
+        series {
+            name readreq
+            color \#ff6666
+        }
+        series {
+            name sendrep
+            color \#bf00bf
+        }
+        series {
+            name keepalive
+            color \#ff0000
+        }
+        series {
+            name dnslookup
+            color \#7648eb
+        }
+        series {
+            name closeconn
+            color \#7f7fff
+        }
+        series {
+            name logging
+            color \#00ffff
+        }
+        series {
+            name gracefin
+            color \#000000
+        }
+        series {
+            name idleclw
+            color \#66c066
+        }
+    }
+}
+
+chart {
+    id 2
+    title Apache - workers
+    options {
+        ylabel workers
+        chart-type area
+        series {
+            name busyworkers
+            color \#ff7a0d
+        }
+        series {
+            name idleworker
+            color \#005467
+        }
+    }
+}
+
+chart {
+    id 3
+    title Apache - bytes/s, bytes/req
+    options {
+        ylabel bytes/req (-) - bytes/s (+)
+        units bytes
+        chart-type area
+        series {
+            name bytpersec
+            color \#005467
+        }
+        series {
+            name bytperreq
+            color \#ff7a0d
+            opposite true
+        }
+    }
+}
+
+chart {
+    id 4
+    title Apache - requests
+    options {
+        ylabel requests/s
+        chart-type area
+        series {
+            name reqpersec
+            color \#005467
+        }
+    }
+}

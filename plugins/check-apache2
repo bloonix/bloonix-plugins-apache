@@ -1,0 +1,269 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+check-apache2 - Plugin to check apache2 server-status.
+
+=head1 SYNOPSIS
+
+    check-apache2 [ OPTIONS ]
+
+    check-apache2 --help
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2009-2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+
+# --------------------------------------------------
+# Plugin options
+# --------------------------------------------------
+
+my $plugin = Bloonix::Plugin->new(verion => "0.8");
+
+$plugin->add_option(
+    name => "URL",
+    option => "url",
+    value_type => "string",
+    value => "url",
+    default => "http://localhost/server-status?auto",
+    regex => qr!^https{0,1}://([a-zA-Z0-9\-\.:]+)/.*\z!,
+    description => "This is the URL to call the server-status of Apache. Please enter the full URL with the query string."
+);
+
+$plugin->has_timeout(default => 10);
+
+$plugin->has_threshold(
+    keys => [
+        { key => "idleworker" },
+        { key => "reqpersec"  },
+        { key => "bytperreq", unit => "bytes" },
+        { key => "bytpersec", unit => "bytes" }
+    ]
+);
+
+$plugin->has_auth_basic;
+$plugin->has_host;
+$plugin->has_use_ipv6;
+
+$plugin->example(
+    description => [
+        "Simple example:",
+        "",
+        "- return WARNING if idleworker is less than 10",
+        "- return critical if idleworker is less than 5",
+        "- return warning if reqpersec is equal or higher than 1000",
+        "- return critical if reqpersec is equal or higher than 2000"
+    ],
+    arguments => [
+        url => "http://localhost/server-status?auto",
+        warning => "idleworker:lt:10",
+        critical => "idleworker:lt:5",
+        warning => "reqpersec:ge:1000",
+        critical => "reqpersec:ge:2000"
+    ]
+);
+
+# --------------------------------------------------
+# Parse options
+# --------------------------------------------------
+
+my $opt = $plugin->parse_options;
+my $curl = "curl --retry 0 --silent";
+
+if ($opt->{url} =~ /^https/) {
+    $curl .= " --insecure";
+}
+
+if ($opt->{username} && $opt->{password}) {
+    $curl .= " --basic --user '$opt->{username}:$opt->{password}'";
+}
+
+if ($opt->{use_ipv6}) {
+    $curl .= " --ipv6";
+}
+
+if ($opt->{host}) {
+    my $replace = $opt->{host};
+    $opt->{url} =~ m!^(http|https)://(.+?)/!;
+    my $proto = $1;
+    $opt->{host} = $2;
+    if ($opt->{host} =~ s/:(\d+)\z//) {
+        $replace .= ":$1";
+    }
+    $opt->{url} =~ s!^$proto://$opt->{host}/!$proto://$replace/!;
+    $curl .= " --header 'Host: $opt->{host}'";
+}
+
+# --------------------------------------------------
+# load() function to request server-status
+# --------------------------------------------------
+
+sub load {
+    my ($curl, $request, $timeout) = @_;
+    my ($content, %stat, $rest);
+
+    eval {
+        $SIG{__DIE__} = sub { alarm(0) };
+        $SIG{ALRM} = sub { die "timeout\n" };
+        alarm($timeout);
+        $content = qx{$curl $request 2>>/dev/null};
+
+        if ($? > 0) {
+            my $err = $? >> 8;
+            die "curl error code $err\n";
+        }
+
+        alarm(0);
+    };
+
+    if ($@) {
+        if ($@ =~ /^timeout/) {
+            $plugin->exit(
+                status => "CRITICAL",
+                message => "request timed out after $timeout seconds",
+                tags => "timeout"
+            );
+        } else {
+            my $err = $@;
+            chomp($err);
+            $err =~ s/\n/ /g;
+            $plugin->exit(
+                status => "CRITICAL",
+                message => $err
+            );
+        }
+    }
+
+    my $rxauto = qr/
+        Total\s+Accesses:\s*(\d+).*
+        Total\s+kBytes:\s*([\d\.]+).*
+        BusyWorkers:\s*([\d\.]+).*
+        IdleWorkers:\s*(\d+).*
+        Scoreboard:\s*(.+)
+    /xsi;
+
+    my %maps = (
+        "_"  => "waitproc",
+        "S"  => "startup",
+        "R"  => "readreq",
+        "W"  => "sendrep",
+        "K"  => "keepalive",
+        "D"  => "dnslookup",
+        "C"  => "closeconn",
+        "L"  => "logging",
+        "G"  => "gracefin",
+        "I"  => "idleclw",
+        "."  => "openslot",
+    );
+
+    %stat = map { $_ => 0 } keys %maps;
+
+    ( $stat{ttlacc}
+    , $stat{ttlbyt}
+    , $stat{busyworkers}
+    , $stat{idleworker}
+    , $rest
+    ) = $content =~ $rxauto;
+
+    if (!$rest) {
+        $plugin->exit(
+            status => "UNKNOWN",
+            message => "unable to parse content"
+        );
+    }
+
+    $stat{$_}++ for (split //, $rest);
+    delete $stat{"\n"};
+
+    foreach my $key (keys %maps) {
+        $stat{ $maps{$key} } = delete $stat{$key};
+    }
+
+    $stat{ttlbyt} *= 1024;
+    return \%stat;
+}
+
+# --------------------------------------------------
+# Load initial statistics
+# --------------------------------------------------
+
+my $init = $plugin->load_json;
+
+if (!defined $init || !defined $init->{time}) {
+    $init = &load($curl, $opt->{url}, $opt->{timeout});
+    $init->{time} = $plugin->gettimeofday;
+    sleep 1;
+}
+
+# --------------------------------------------------
+# Load current statistics
+# --------------------------------------------------
+
+my $stat = &load($curl, $opt->{url}, $opt->{timeout});
+my $time = $plugin->gettimeofday;
+my $delta = $time - $init->{time} || 1;
+
+# --------------------------------------------------
+# Calculate deltas
+# --------------------------------------------------
+
+if ($init->{ttlacc} > $stat->{ttlacc}) {
+    $init->{ttlacc} = 0;
+    $init->{ttlbyt} = 0;
+}
+
+if ($stat->{ttlacc}) {
+    $stat->{reqpersec} = sprintf("%.3f", ($stat->{ttlacc} - $init->{ttlacc}) / $delta);
+    $stat->{bytpersec} = sprintf("%.3f", ($stat->{ttlbyt} - $init->{ttlbyt}) / $delta);
+    $stat->{bytperreq} = sprintf("%.3f", ($stat->{ttlbyt} / $stat->{ttlacc}));
+} else {
+    $stat->{reqpersec} = sprintf("%.3f", 0);
+    $stat->{bytpersec} = sprintf("%.3f", 0);
+    $stat->{bytperreq} = sprintf("%.3f", 0);
+}
+
+# --------------------------------------------------
+# Store statistics for the next run
+# --------------------------------------------------
+
+$plugin->safe_json({
+    time => $time,
+    ttlacc => $stat->{ttlacc},
+    ttlbyt => $stat->{ttlbyt},
+});
+
+# --------------------------------------------------
+# Check warning and critical
+# --------------------------------------------------
+
+my $result = $plugin->check_thresholds(
+    stats => $stat,
+    upshot_keys => [qw(idleworker reqpersec bytpersec bytperreq)]
+);
+
+$plugin->exit(
+    status => $result->{status},
+    message => $result->{upshot},
+    stats => $stat
+);
