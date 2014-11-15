@@ -39,7 +39,7 @@ use Bloonix::Plugin;
 # Plugin options
 # --------------------------------------------------
 
-my $plugin = Bloonix::Plugin->new(verion => "0.8");
+my $plugin = Bloonix::Plugin->new(version => "0.9");
 
 $plugin->add_option(
     name => "URL",
