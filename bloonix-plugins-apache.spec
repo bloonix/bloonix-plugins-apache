@@ -1,6 +1,6 @@
 Summary: Bloonix plugins for apache.
 Name: bloonix-plugins-apache
-Version: 0.11
+Version: 0.12
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -53,6 +53,8 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Tue Mar 29 2016 Jonny Schulz <js@bloonix.de> - 0.12-1
+- Extra release because the gpg key of bloonix is updated.
 * Mon Mar 09 2015 Jonny Schulz <js@bloonix.de> - 0.11-1
 - Fixed typo verion -> version.
 * Mon Nov 03 2014 Jonny Schulz <js@bloonix.de> - 0.10-1
